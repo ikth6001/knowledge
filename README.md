@@ -6,3 +6,5 @@ IT 관련 지식들 정리
 [데이터베이스](databaseKnowledge.md)
 
 [스레드와 락](lockThreadKnowledge.md)
+
+[리눅스](linuxKnowledge.md)
