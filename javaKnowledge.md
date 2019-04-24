@@ -81,4 +81,66 @@ Arrays.asList(1,2,3).stream()
                     .reduce((a,b) -> a-b)
                     .get();  // -4
 ```
+<br>
+<br>
+<h4>JVM Memory Architecture</h4>
+
+위의 그림과 같이 JVM은 메모리를 큰 카테고리로 2개, 세부 카테고리로 4개로 구성한다.  
+좌측 METHOD AREA 및 HEAP 영역은 모든 쓰레드가 공유하는 메모리 영역이다. 반면 우측을 보면 각 쓰레드 별로 Stack과 PC Register 메모리가 할당되는 것을 볼 수 있다. 각 메모리의 역할을 보자.  
+
+* METHOD AREA : 클래스 정보를 저장하는 영역. 클래스로더는 클래스 파일 바이트코드로부터 클래스를 로드한 후 JVM에게 정보를 넘긴다. JVM은 넘겨받은 정보를 통해 내부적으로 바이트코드를 다시 만든 후 METHOD AREA에 저장한다. METHOD AREA는 정적/동적으로 그 크기를 조절할 수 있고 JVM의 Garbage collector로부터 처리하는 메모리 영역이 아니다. 각 저장되는 정보는 다음과 같다.
+   * Runtime Constant Pool : int/long/float/final String과 같은 상수, 클래스 타입, 속성과 같은 정보
+   * Method Code : 메소드 구현 정보
+   * FieldsValues : Runtime Constat Pool에 있는 클래스의 모든 필드 정보
+* HEAP : 클래스 인스턴스 및 배열 인스턴스가 저장되는 영역이다. JVM이 기동되면서 같이 메모리 영역이 생성되고 마찬가지로 정적/동적으로 그 크기를 조절할 수 있다. 반면에 HEAP은 Garbage collector로부터 할당/해제 되는 메모리 영역이다. HEAP은 아래와 같이 구성된다.  
+
+HEAP은 크게 Young Generation과 Tenured Generation으로 나뉜다.
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
 
