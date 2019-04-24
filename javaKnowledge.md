@@ -84,7 +84,7 @@ Arrays.asList(1,2,3).stream()
 <br>
 <br>
 <h4>JVM Memory Architecture</h4>
-
+이미지
 위의 그림과 같이 JVM은 메모리를 큰 카테고리로 2개, 세부 카테고리로 4개로 구성한다.  
 좌측 METHOD AREA 및 HEAP 영역은 모든 쓰레드가 공유하는 메모리 영역이다. 반면 우측을 보면 각 쓰레드 별로 Stack과 PC Register 메모리가 할당되는 것을 볼 수 있다. 각 메모리의 역할을 보자.  
 
@@ -92,9 +92,17 @@ Arrays.asList(1,2,3).stream()
    * Runtime Constant Pool : int/long/float/final String과 같은 상수, 클래스 타입, 속성과 같은 정보
    * Method Code : 메소드 구현 정보
    * FieldsValues : Runtime Constat Pool에 있는 클래스의 모든 필드 정보
-* HEAP : 클래스 인스턴스 및 배열 인스턴스가 저장되는 영역이다. JVM이 기동되면서 같이 메모리 영역이 생성되고 마찬가지로 정적/동적으로 그 크기를 조절할 수 있다. 반면에 HEAP은 Garbage collector로부터 할당/해제 되는 메모리 영역이다. HEAP은 아래와 같이 구성된다.  
-
-HEAP은 크게 Young Generation과 Tenured Generation으로 나뉜다.
+* HEAP : 클래스 인스턴스 및 배열 인스턴스가 저장되는 영역이다. JVM이 기동되면서 같이 메모리 영역이 생성되고 마찬가지로 정적/동적으로 그 크기를 조절할 수 있다. 반면에 HEAP은 Garbage collector로부터 할당/해제 되는 메모리 영역이다. HEAP은 아래와 같이 구성된다.
+이미지
+위의 그림을 보면 HEAP은 크게 Young Generation과 Old Generation으로 나뉜다.
+   * Young : 새로운 클래스 인스턴스가 할당되는 영역이다. Young이 꽉차면 Garbage Collector는 Young에서 오래된 객체 인스턴스를 Old로 옮기게된다. 이를 Minor GC라고 한다. Young 영역은 3개의 영역으로 또 다시 나뉘게 된다.
+      * Eden : 안전 최신 클래스 인스턴스는 Eden 영역에 할단된다.
+      * Survivor1/2 : Eden 영역이 꽉차면 Minor GC가 발생하고 Old로 이동 안한 객체는 Survivor로 이동하게 된다. 또한 Garbage Collector는 2개의 Survivor중 하나의 Survivor은 항상 비어있도록 메모리 영역을 조절한다. 오랜시간 Survivor에 남아있는 객체는 마침내 Old 영역으로 이동하게 된다.
+   * Old : 이 영역은 Minor GC 때 Young으로부터 넘어온 객체들이 할당되는 영역이다. Old가 꽉 차면 마찬가지로 Garbage Collector가 동작하여 Old 영역에서 메모리를 해제하게 된다. 이를 Major GC라고 하고 이 때는 시간이 굉장히 오래걸리고 프로세스가 일시적으로 동작을 중지하게 된다.
+   * Perm : 클래스와 메소드에 의해 사용되는 어플리케이션 메타 데이터를 가지고 있는 영역. Perm은 클래스에 의해 런타임에 할당되고 Java SE 라이브러리 클래스와 메소드들드 Perm 영역에 포함된다. Perm의 Object는 Major GC때 해제된다. **주의)** Java8부터 Perm 영역은 사라지고 Metaspace라는 영역이 생기게 되었다. Heap에 할당되는 Perm과 달리 Metaspace는 Heap 영역이 아닌 Native memory에 위치하게 된다. 위에서 설명한 METHOD AREA는 Perm영역의 일부이다.
+* PC Register : 현재 JVM이 실행하는 Context(어느 쓰레드의 어느 메소드)를 가리키는 포인터이다.
+* JVM Stack : 현재 쓰레드가 실행하는 Context정보(called Frame)를 저장하는 Stack 메모리이다. Frame에는 메소드 지역 변수, 상수 Reference와 같은 정보를 가지고 있다.
+ 
 
 <br>
 <br>
