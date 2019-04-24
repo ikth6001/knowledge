@@ -84,7 +84,8 @@ Arrays.asList(1,2,3).stream()
 <br>
 <br>
 <h4>JVM Memory Architecture</h4>
-이미지
+
+![runtimeDataArea](images/java/runtimeDataArea.PNG?raw=true "runtimeDataArea")
 위의 그림과 같이 JVM은 메모리를 큰 카테고리로 2개, 세부 카테고리로 4개로 구성한다.  
 좌측 METHOD AREA 및 HEAP 영역은 모든 쓰레드가 공유하는 메모리 영역이다. 반면 우측을 보면 각 쓰레드 별로 Stack과 PC Register 메모리가 할당되는 것을 볼 수 있다. 각 메모리의 역할을 보자.  
 
@@ -93,7 +94,7 @@ Arrays.asList(1,2,3).stream()
    * Method Code : 메소드 구현 정보
    * FieldsValues : Runtime Constat Pool에 있는 클래스의 모든 필드 정보
 * HEAP : 클래스 인스턴스 및 배열 인스턴스가 저장되는 영역이다. JVM이 기동되면서 같이 메모리 영역이 생성되고 마찬가지로 정적/동적으로 그 크기를 조절할 수 있다. 반면에 HEAP은 Garbage collector로부터 할당/해제 되는 메모리 영역이다. HEAP은 아래와 같이 구성된다.
-이미지
+![heapMemoryStructure](images/java/heapMemoryStructure.PNG?raw=true "heapMemoryStructure")
 위의 그림을 보면 HEAP은 크게 Young Generation과 Old Generation으로 나뉜다.
    * Young : 새로운 클래스 인스턴스가 할당되는 영역이다. Young이 꽉차면 Garbage Collector는 Young에서 오래된 객체 인스턴스를 Old로 옮기게된다. 이를 Minor GC라고 한다. Young 영역은 3개의 영역으로 또 다시 나뉘게 된다.
       * Eden : 안전 최신 클래스 인스턴스는 Eden 영역에 할단된다.
