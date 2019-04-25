@@ -107,7 +107,63 @@ Arrays.asList(1,2,3).stream()
 
 <br>
 <br>
-<h4></h4>
+<h4>쓰레드 덤프 분석하기</h4>
+
+* Java 쓰레드 배경 지식
+   * 쓰레드 동기화 : 쓰레드는 다른 쓰레드와 동시에 실행할 수 있다. 쓰레드가 공유자원을 사용할 땐 정합성 보장을 위하 하나의 쓰레드만 접근 가능하도록 제한해야 한다. Java는 Monitor를 통해 하나의 Java 객체에 접근은 하나의 쓰레드만 할 수 있도록 보장한다. 쓰레드는 객체 접근 시, Monitor를 획득해야 하고 Monitor가 없는 객체에 접근하기 위해선 Monitor가 해제될 때까지 Wait Queue에서 대기하게 된다.
+   * 쓰레드 상태
+      * NEW : 쓰레드가 생성되었지만 아직 실행되지 않은 상태
+      * RUNNABLE : 현재 CPU를 점유하고 작업을 수행중인 상태. **운영체제의 자원 분배로 인해 WAITING 상태가 될 수도 있다**
+      * BLOCKED : Monitor 획득을 위해 기다리는 상태
+      * WAITING : wait(), join() 메서드 등을 이용해 대기하고 있는 상태
+      * TIMED_WAITING : WAITING과 마찬가지로 대기하지만 sleep과 같이 특정 시간동안 대기하는 상태
+   * 쓰레드 종류
+      * 데몬 쓰레드 : 프로세스의 비데몬 쓰레드가 죽으면 동작을 중지하는 쓰레드로 일반적으로 어플리케이션이 동작하는데 도움을 주는 역할을 한다(e.g. Garbage Collector)
+      * 비데몬 쓰레드 : 데몬 쓰레드가 아닌 쓰레드로 일반적인 쓰레드를 의미한다.
+* 쓰레드 덤프 획득하기
+   * jstack 활용하기  
+      1. 프로세스 PID 획득하기 : jdk의 명령어를 활용한다. e.g) jps -v
+      2. 단계 1에서 확인한 PID를 통해 쓰레드 덤프 획득 : jdk 명령 활용. e.g) jstack ${PID}
+   * Java VisuamVM (GUI 프로그램) 사용하기
+   * kill 활용하기
+      1. 리눅스 환경에서만 가능하다. 먼저 ps -ef | grep java 와 같은 명령어로 PID를 획득한다.
+      2. 획득한 PID를 통해 kill -3 ${PID} 또는 kill -QUIT ${PID} 명령어를 통해 쓰레드 덤프를 획득한다.
+* 쓰레드 덤프의 정보
+   * 쓰레드 이름 : 덤프 가장 첫줄의 pool-1-thread-13 가 쓰레드 이름이 된다.
+   * 우선 순위 : 쓰레드의 우선순위로 첫 줄의 prio=6 이 우선순위를 의미한다.
+   * 쓰레드 ID : 쓰레드의 ID로, 이 정보를 통해 쓰레드의 CPU 사용, 메모리 사용 등의 유용한 정보를 알 수 있다.
+   * 쓰레드 상태 : 쓰레드의 상태를 의미한다. 첫 줄의 runnable [0x...] 가 쓰레드 상태이다.
+   * 쓰레드 콜스택 : 쓰레드의 스택 트레이스를 의미한다.
+
+```
+"pool-1-thread-13" prio=6 tid=0x000000000729a000 nid=0x2fb4 runnable [0x0000000007f0f000]
+
+java.lang.Thread.State: RUNNABLE
+
+at java.net.SocketInputStream.socketRead0(Native Method)
+
+at java.net.SocketInputStream.read(SocketInputStream.java:129)
+
+at sun.nio.cs.StreamDecoder.readBytes(StreamDecoder.java:264)
+
+at sun.nio.cs.StreamDecoder.implRead(StreamDecoder.java:306)
+
+at sun.nio.cs.StreamDecoder.read(StreamDecoder.java:158)
+
+- locked <0x0000000780b7e688> (a java.io.InputStreamReader)
+
+at java.io.InputStreamReader.read(InputStreamReader.java:167)
+
+at java.io.BufferedReader.fill(BufferedReader.java:136)
+
+at java.io.BufferedReader.readLine(BufferedReader.java:299)
+
+- locked <0x0000000780b7e688> (a java.io.InputStreamReader)
+
+at java.io.BufferedReader.readLine(BufferedReader.java:362)
+```
+   
+
 
 <br>
 <br>
