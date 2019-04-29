@@ -167,7 +167,119 @@ at java.io.BufferedReader.readLine(BufferedReader.java:362)
 
 <br>
 <br>
-<h4></h4>
+<h4>버블 정렬</h4>
+버블 정렬 알고리즘은 최악의 경우(역순 정렬) N^2의 시간 복잡도를 가지고 최선의 경우(정렬) N의 시간복잡도를 가진 알고리즘이다. 알고리즘의 실행은 다음과 같은 방식으로 진행한다.  
+
+1. N 배열을 0 ~ N까지 방문 하면서 i원소가 i+1원소보다 비교 우선순위가 낮으면 서로 교체한다.
+2. 단계 1에서 교체 작업이 한번이라도 일어나면 1번을 다시 반복한다.  
+
+의사코드는 다음과 같다.
+```
+for i between 0 and (array length - 2):
+   if(array(i+1) < array(i)):
+      switch array(i) and array(i+1)
+
+repeat until a complete iteration where no elements are switched.
+```
+
+<br>
+<br>
+<h4>삽입 정렬</h4>
+하나의 추가 배열을 만들고, 정렬할 배열을 순회하면서 새로운 배열에 순서를 유지하며 insert 하는 알고리즘이다. 최악의 경우(정렬) N^2, 최선의 경우(역순 정렬) N의 시간 복잡도를 가진다. 의사코드는 다음과 같다.
+
+```
+Given a list l and new list nl
+for each element originalItem in list l:
+   for each element newItem in nl:
+      if(originalItem > newItem) :
+         insert originalItem before newItem
+      else :
+         move to next element
+   if no item has been inserted:
+      insert originalItem at end of nl
+```
+
+<br>
+<br>
+<h4>퀵 정렬</h4>
+임의의 원소를 하나 정하고(이를 pivot 이라고 칭한다) 이 원소보다 우선순위가 낮은 원소를 모아놓는 배열과 높은 원소를 모아놓는 배열을 각각 만들어 원소들을 삽입한다. 이 각각의 추가된 배열들을 재귀적으로 계속 호출하고 마지막에 '작은 배열 + Pivot + 큰 배열' 방식으로 합병한다. 각 배열을 순회하는 횟수는 N이고 재귀는 전체 배열 크기의 절반만큼 호출 되므로 시간 복잡도는 NlogN이 된다 의사코드는 다음과 같다.
+
+```
+method quickSort(list l):
+   if l.size < 2:
+      return l
+   
+   var pivot= l(random number)
+   for each element e in l:
+      if e < pivot:
+         add e to lowerList
+      else:
+         add e to biggerList
+
+   var sortedLower= quickSort(lowerList)
+   var sortedBigger= quickSort(biggerList)
+   return sortedLower + pivot + sortedBigger
+```
+
+<br>
+<br>
+<h4>병합정렬</h4>
+퀵정렬과 비슷한 방식으로 배열의 가운데 인덱스를 정해 인덱스가 더 작은 부분과 더 큰 부분으로 리스트를 나눠 생성하고 이를 재귀적으로 계속 호출한다. 이 후 합병할 때 각 두 개의 리스트를 차례로 방문하면서 더 작은 원소를 새로운 리스트에 앞에서부터 차례대로 삽입한다. 퀵정렬과 마찬가지로 NlogN의 시간 복잡도를 가진다. 의사코드는 다음과 같다.
+
+```
+method mergeSort(list l):
+   if l.size < 2:
+      return l
+      
+   var m= l.size / 2
+   list left= l[0..m]
+   list right= l[m..end]
+   
+   var sortedLeft= mergeSort(left);
+   var sortedRight= mergeSort(right);
+   
+   return merge(sortedLeft, sortedRight);
+   
+method merge(list left, list right):
+   var sortedList
+   var leftIdx= 0
+   var rightIdx= 0
+   
+   while(leftIdx < left.length and rightIdx < right.length):
+      if(left[leftIdx] < right[rightIdx]):
+         add left[leftIdx] to sortedList
+         leftIdx++
+      else:
+         add right[rightIdx] to sortedList
+         rightIdx++
+         
+   while(leftIdx < left.length):
+      add left[leftIdx] to sortedList
+      leftIdx++
+   
+   while(rightIdx < right.length):
+      add right[rightIdx] to sortedList
+      rightIdx++
+
+   return sortedList
+```
+
+<br>
+<br>
+<h4>이진 검색</h4>
+일반적인 배열 데이터에서 특정 값을 찾으려면 모든 원소를 순회해야 하지만 정렬되어있는 배열이라면 이진 검색을 통해 시간 복잡도 N의 시간에 검색을 완료할 수 있다. 배열의 가운데 값(인덱스 M)과 찾으려는 값을 비교하여 우선순위가 높으면 배열의 [0...M]을, 낮으면 [M+1... END]를 재귀적으로 다시 비교하면 된다. 의사코드는 아래와 같다.
+
+```
+method binarySearch(list l, element e):
+   var m= l.length / 2
+   
+   if(l[m] = e):
+      return true
+   else(l[m] < e):
+      return binarySearch(l[m+1... end])
+   else:
+      return binarySearch(l[0... m])
+```
 
 <br>
 <br>
@@ -209,3 +321,148 @@ at java.io.BufferedReader.readLine(BufferedReader.java:362)
 <br>
 <h4></h4>
 
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
+
+<br>
+<br>
+<h4></h4>
