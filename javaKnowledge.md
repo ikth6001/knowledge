@@ -311,7 +311,66 @@ method binarySearch(list l, element e):
 
 <br>
 <br>
-<h4></h4>
+<h4>디자인 패턴</h4>
+
+* 빌더패턴 : 하나의 객체가 있고 이 객체가 동작하기 위해선 특정 필드의 값이 조건을 충족해야 한다고 가정하자. 이 때, 이 필드 값을 무조건 생성자로 받을 경우 다양한 조합의 생성자가 생길 수 있다. 때문에 빌더패턴으로 객체를 생성하는 사용자도 편리하게 생성하고 객체의 유효성도 쉽게 처리할 수 있다. 아래 사용 예제를 보면 생성자를 private으로 하고, build 메소드에서 유효성을 검사함을 알 수 있다.
+```
+public class Pet {
+   private Animal animal;
+   ...
+   
+   private Pet() { }
+
+   public static class Builder {
+      private Animal animal;
+      private String petName;
+      private String ownerName;
+      ...
+      
+      public Builder withAnimal(final Animal animal) {
+         ...
+         return this;
+      }
+      
+      public Builder withPetName(final String petName) { ... }
+      ...
+      
+      public Pet build() {
+         if(animal == null
+            || petName == null
+            || ...) {
+            // 에러처리   
+         }
+         
+         return new Pet(...);
+      }
+   }
+}
+```
+* 데코레이터 패턴 : 특정 객체의 기능을 설정하거나 변경할 수 있게 해주는 패턴이다. 예를 들어 InputStream, OutputStream이 있다. 이 클래스 그리고 하위 클래스는 구현 클래스에서 정의한 방법으로 데이터를 읽고 저장한다. 데코레이터 패턴의 객체는 위임할 객체가 있다면, 해당 위임 객체에게 작업이 완료된 데이터를 넘겨 위임 객체를 실행하게 된다. 예를 들어 아래와 같은 코드가 있다고 가정하자. 아래와 같이 작성한 이유는 무엇일까? FileOutputStream은 파일에 데이터를 작성하는 객체이다. BufferedOutputStream은 write 메소드가 호출되면 byte를 저장 해두었다가 한 번에 write하는 객체이다. 때문에 위와 같이 객체를 만들어 write하면 File IO 횟수가 줄어 더 효율적으로 데이터를 저장할 수 있다.
+```
+FileOutputStream fos= new FileOutputStream(new File("data.txt"));
+BufferedOutputStream bos= new BufferedOutputStream(fos);
+```
+* 플라이웨이트 패턴 : 몇개의 객체에 많은 값을 공유해야 할 때 유용한 패턴이다. 예를 들어 java.lang.Integer의 valueOf(int i) 메소드를 보면 실제 특정 범위의 int 값은 static 캐쉬에 있는 Integer instance를 리턴하도록 구현되어 있다. 때문에 Integer.valueOf로 생성된 객체들은 같은 reference를 공유할 수 있다(해당 범위에 속한다면)
+```
+public class Integer {
+   
+   static {
+      for(int k=0; k<cache.length; k++) {
+         cache[k]= new Integer[j++);
+      }
+   }
+
+   public static Integer valueOf(int i) {
+      if(i >= IntegerCache.low && i<= IntegerCache.high) {
+         return IntegerCache.cache[i + (-IntegerCache.low)];
+      }
+      return new Integer(i);
+   }
+}
+
+```
 
 <br>
 <br>
