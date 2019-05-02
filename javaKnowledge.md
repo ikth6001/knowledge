@@ -374,19 +374,64 @@ public class Integer {
 
 <br>
 <br>
-<h4></h4>
+<h4>원시타입</h4>
+
+* boolean, int, double 같은 각각의 기본 타입을 원시(primitive) 타입이라고 한다. 원시타입은 객체와 달리 null이 될 수 없고 각각 기본 값을 가지고 있다.
+   * boolean : 1bit, false
+   * short : 16bit, 0
+   * int : 32bit, 0
+   * long : 64bit, 0L
+   * float : 32bit, 0.0f
+   * double : 64bit, 0.0
+   * char : 16bit, 0, **unsigned** ( 0 ~ 65,535 )
+* 왜 Integer.MIN_VALUES에 대응하는 양수가 없는가?
+short, long, int 타입의 2진수 값 저장소는 2의 보수 값을 사용한다. 2의 보수는 양수 값을 음로 표현할 때 NOT 연산 후 1을 더하는 방식이다. 1의 보수(양수를 음수로 표현할 때 단순히 NOT 연산만 하는 방식)를 사용 안하는 이유는 1의 보수에는 0 값에 대해 +, - 두 개의 값이 존재하기 때문이다. 왜 0이 두개 생길까? 비트의 최 상위 비트는 sign 비트라고 하여 0일땐 양수, 1일땐 음수를 의미하도록 해두었기 때문이다. 때문에 100000... 과 01111111 모두 0을 의미하여 두 개의 0이 생기게 된다.  
+음수의 제일 큰 값은 sign 비트가 1이고 나머지가 0인 값이다. 이 값을 음수화 해서 양수로 변경하면 sign 비트가 1이 되어 양수가 될 수 없기 때문에 음수의 제일 절대값이 큰 값을 양수로 표현할 수 없다.
 
 <br>
 <br>
-<h4></h4>
+<h4>객체 이용하기</h4>
+
+* 객체는 원시 타입과 달리 상태(맴버 변수)와 행동(메소드)을 가지고 있다. 또한 원시타입과 달리 객체는 참조 타입이다 라고 말할 수 있다. 쉽게 말해 int a=10; int b=a; 라는 코드가 있다면 변수 a는 10이라는 값이 저장된 메모리를 가리키고, b 또한 같은 10이라는 값이 저장된 메모리를 가리키지만 a와 b가 가리키는 메모리가 동일한 것은 아니다. 하지만 List list1=new ArrayList(); List list2=list1; 이라는 코드가 있을 때 list1과 list2는 동일한 메모리를 가리키게 된다. 이를 참조 타입이라고 한다.
+* final 키워드와 객체참조
+객체에 선언하는 final 키워드는 원시 타입의 final 키워드와 동일하다. 즉 변수 정의에서 지정된 값처럼 일단 할당이 되고 나면 메모리 위치가 변경되지 않는다는 의미이다. 물론 객체의 맴버변수가 final이 아니라면 객체의 상태는 변경이 가능하다.
+* private에 대한 오해 : 일반적으로 private으로 선언한 변수는 같은 인스턴스 내에서만 접근이 가능하다고 생각 하는데 같은 타입의 클래스면 private 멤버 변수에 접근이 가능하다. 아래 예제 소스를 보자.
+```
+public class Complex {
+   private double real;
+   
+   public Complex(double real) { this.real=real; }
+   
+   public Complex add(double other) {
+      return new Complex(this.real + other.real);  // 접근가능
+   }
+}
+```
+* 다형성이란? 행동의 특정 타입에 대한 정의를 만들 수 있게 하고, 행동을 구현하는 수많은 다른 클래스들을 갖게 하는 객체 지향 개발의 핵심개념이다.
+
 
 <br>
 <br>
-<h4></h4>
+<h4>자바 배열</h4>
+
+* 자바 배열에서 기억해야 하는 중요한 사항은 **배열은 객체로 취급한다**는 것이다.
+
 
 <br>
 <br>
-<h4></h4>
+<h4>String 이용하기</h4>
+
+* 자바에서 String 객체는 특별하게 처리된다. String을 new 연산자로 생성하면 객체는 heap 영역에 쌓이게 되지만 리터럴로 생성하면 String constant pool 이라는 곳에 생성되게 된다. 자세히 말하면 리터럴로 String을 생성하면 내부적으로 String의 intern 메서드가 호출되면서 객체 생성 전 String constant pool에 해당 문자열이 있는지 확인하고 있으면 그 주소값을 반환하고 아니면 새로 생성하게 된다. 참고로 Java6에서는 String constant pool이 perm에 있었지만 Java7부터 heap 영역으로 옮겨가면서 GC까지 가능하게 되었다.
+* Immutable 객체 : String은 immutable 객체, 즉 불변 객체이다. 대문에 "AAA".substring(0, 1)을 하면 AAA객체가 A라는 값을 가진 객체로 변경되는 것이 아니라 A라는 객체가 새롭게 만들어지는 것이다. 이와 같은 특징을 가진 immutable 클래스는 Integer, Long, Double 등이 있다. immutable 객체의 장점과 단점은 다음과 같다.
+   * 장점 : 생성자, 접근 메소드에 대한 방어 복사가 필요 없고, 멀티 스레드 환경에서 동기화 처리 없이 객체를 공유할 수 있다.
+   * 단점 : 매번 객체가 새롭게 만들어지므로 메모리 누수와 객체 생성으로 인한 성능 저하에 주의해야 한다.
+* 인터닝 : 위에서 말한 String의 특성을 인터닝이라고 한다. 이는 플라이웨이트 디자인 패턴을 구현했다고 할 수 있다. Integer 클래스의 특정 범위의 값을 캐쉬 해놓는것도 비슷한 원리라고 할 수 있다. 아래 코드를 보면 쉽게 이해할 수 있다.
+```
+final Integer int1= Integer.valueOf(new String("100")); // String을 new 연산자로 생성 했으므로 두 개의 String은 다른 객체임.
+final Integer int2= Integer.valueOf(new String("100"));
+
+assertTrue(int1 == int2);
+```
 
 <br>
 <br>
