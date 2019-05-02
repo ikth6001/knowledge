@@ -435,11 +435,24 @@ assertTrue(int1 == int2);
 
 <br>
 <br>
-<h4></h4>
+<h4>제네릭 이해하기</h4>
+
+* 공분산이라고 알려진 자바의 제네릭 시스템에는 상하위 타입에 대한 모델링 방법이 없다. 아래 소스를 보면서 이해 해보자.
+```
+Object[] objs= new String[10]; // 가능. 배열은 공변타입이다.
+List<Object> lists= new ArrayList<String>(); // 불가능. 상하위 타입에 대한 개념이 없음. 아래와 같이 바꾸면 가능
+List<?> lists= new ArrayList<String>();
+List<? extends Object> lists= new ArrayList<String>();
+```
 
 <br>
 <br>
-<h4></h4>
+<h4>예외 처리하기</h4>
+
+* 자바에서 예외 클래스는 모두 Throwable을 상속한다. Throwable의 하위 클래스로 Exception과 Error가 있고, Error의 경우 일반적으로 OutOfMemoryError와 같이 개발자가 처리할 수 없을 때 사용한다. 다음으로 Exception은 아래와 같이 두 개의 종류가 있다.
+   * RuntimeException : 개발자가 꼭 확인할 의무가 없는 Exception으로 RuntimeException을 상속한다.
+   * CheckedException : 개발자가 반드시 확인해야할 의무가 있는 Exception(catch 또는 throw를 해야 함)으로 RuntimeException을 상속 안한다.
+
 
 <br>
 <br>
