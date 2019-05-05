@@ -456,7 +456,41 @@ List<? extends Object> lists= new ArrayList<String>();
 
 <br>
 <br>
-<h4></h4>
+<h4>자바 가상머신 이해하기</h4>
+
+자바 가상머신은 운영체제와 애플리케이션 사이에 위치하면서 애플리케이션이 플랫폼에 상관없이 독립적으로 실행될 수 있도록 만들어준다.
+자바 프로그램은 javac 명령을 통해 바이트코드로 컴파일 되고 이 바이트코드는 JVM에서 명령어들을 아키텍처와 운영체제용으로 해석한다.
+
+* finalize 메소드는 garbage collector가 메모리 해제하기로 한 객체를 해제작업 할 때 제일 먼저 호출하는 메소드이다. 단, 이 메소드에서 자원 close(DB Connection, In/OutStream 등)을 하려고 해서는 안된다. 이 메소드가 언제 호출될지 보장될 수 없기 때문이다.
+* WeakReference는 제네릭 컨테이너 클래스이다. 들어있는 인스턴스에 강력한 참조가 없으면 가비지 컬렉션의 수집 대상이 된다. 아래 코드를 보자.
+클라이언트 코드에서 pop 이후 데이터 객체가 clear를 하면 다음 GC 때 객체의 메모리가 해제되게 된다.
+```
+public class WeakReferenceStack {
+	private final List<WeakReference<String>> stackReferences= new LinkedList<>();
+	private int pointer;
+	
+	public void push(String data) {
+		this.stackReferences.add(pointer, new WeakReference<>(data));
+	}
+	
+	public String pop() {
+		pointer--;
+		return this.stackReferences.get(pointer).get();
+	}
+}
+```
+* native 메소드란 플랫폼 독립적인 Java라고 해도 운영체제에 특화된 코드, 라이브러리, 네트워크 인터페이스 자원 호출이 필요한 경우 이러한 기능이 잘 정의된 C, C++의 헤더를 사용할 수 있도록 하는 기능이다.
+* shutdown hook 이란 JVM이 종료되기 직전에 실행되는 메소드로 여러가지 유용한 정보를 남길 때 사용한다. 다음 코드를 보자
+```
+public static void main(String[] args) {
+	Runtime.getRuntime().addShutdownHook(new Thread() {
+		@Override
+		public void run() {
+			...
+		}
+	});
+}
+```
 
 <br>
 <br>
