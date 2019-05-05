@@ -494,7 +494,103 @@ public static void main(String[] args) {
 
 <br>
 <br>
-<h4></h4>
+<h4>동시성</h4>
+
+* **Junit은 기본적으로 Main 스레드의 실행이 끝나면 프로세스를 종료 해버린다.** 때문에 테스트를 위해선 Runnable 객체가 Main 스레드에서 실행하도록 하거나 다른 스레드가 끝날 때까지 Main 스레드가 기다리도록 해야한다.
+
+* Atomic 클래스는 원자 연산을 보장하는 클래스를 의미한다. 즉 다른 스레드는 모두 메서드 호출이 완료될 때까지 이 클래스의 참조가 수정되지 않음이 보장된다. 아래 예제는 AtomicInteger 객체를 사용한 예제로 synchronized 블록을 사용 안해도 값이 보장됨을 알 수 있다.
+```
+@Test
+public void atomicSharedState() {
+	final ExecutorService executorService= Executors.newCachedThreadPool();
+	final AtomicCounter c= new AtomicCounter();
+	executorService.execute(new CounterSetter(c));
+	
+	final int vlaue= c.getNumber().incrementAndGet();
+	assertEquals(1, value); // synchronized 블록으로 감싸지 않아도 값이 보장된다.
+}
+
+class CounterSetter implements Runnable {
+	private final AtomicCounter counter;
+	
+	...
+	@Override
+	public void run() {
+		while(true) {
+			counter.getNumber().set(0);
+		}
+	}
+}
+
+class AtomicCounter {
+	private final AtomicInteger number= new AtomicInteger(0);
+	
+	public AtomicInteger getNumber() {
+		return number;
+	}
+}
+```
+
+* Akka란 메시지를 처리(분산/전달)하도록 설계된 프레임워크로 스레드와 락의 동시성에 신경쓸 필요 없이 메시지의 흐름에만 집중할 수 있도록 도와준다. 큰 장점 중 두 가지를 살펴보자.
+	* 고장 방지 처리 : Akka를 사용하면서 메시지를 수신하는 액터의 고장에 대하여 송신하는 액터는 신경쓸 필요가 없다. 아래 코드를 보자. DividnigActor에 문제가 생기더라도 Strategy에 따라 새로운 Actor가 자동생성 되고 문제를 일으키는 CrashActor는 이 사실조차 모르는 상태에서 메시지를 송신 및 수신할 수 있다.
+	* 높은 동시 처리 능력 : Akka를 사용하면서 메시지를 동시 처리할 때 Lock과 같은 부분에 대하여 사용하는 클라이언트 코드는 신경 쓸 필요가 없다. 아래 코드를 보면 Router를 통해 라운드 로빈 방식으로 각 액터에게 메시지를 병렬로 수신함을 볼 수 있다. Router를 사용 안 할 경우 각각의 메시지가 순서대로 10초씩 기다리면서 수신하게 된다.
+```
+class CrashActor extends UntypedActor {
+	public static void main(String[] args) {
+		final ActorSystem system= ActorSystem.create("actorSystem");
+		
+		final ActorRef crashRef= system.actorOf(Props.create(ActorCrash.class));
+		final ActorRef dividingActorRef= System.actorOf(Props.create(DividingActor.class));
+		
+		dividingActorRef.tell(5, crashRef);
+		dividingActorRef.tell(0, crashRef);	// dividingActor에 문제가 발생하게 되는 메시지
+	}
+}
+
+class DividingActor extends UntypedActor {
+	@Override
+	public void onReceive(Object message) {
+		iInteger number= (Integer) message;
+		this.getSender().tell(10 / number, getSelf());	// 메시지로 0 수신 시, 에러 발생. 하지만 Exception 처리 안 함
+	}
+	
+	@Override
+	public SupervisorStrategy supervisorStrategy() {
+		return enw OneForOneStrategy(10, Duration.Inf(),
+			new Function<Throwable, SupervisorStrategy.Directive>() {
+				return SueprvisorStrategy.restart();	// exception 발생 시, Actor를 새로 생성
+			}
+	}
+}
+```
+
+```
+class MultiActors {
+	public static void main(String[] args) {
+		final ActorSystem system= ActorSystem.create("actorSystem");
+		//	final ActorRef ref= system.actorOf(Props.create(LongRunningActor.class));
+		final ActorRef ref= system.actorOf(Props.create(LongRunningActor.class))
+					  .withRouter(new RoundRobinRouter(3)));
+		
+		System.out.println("Sending message 1");
+		ref.tell("Message1", null);
+		System.out.println("Sending message 2");
+		ref.tell("Message2", null);
+		System.out.println("Sending message 3");
+		ref.tell("Message3", null);
+	}
+
+}
+
+class LongRunningActor extends UntypedActor {
+	@Override
+	public void onReceive(Object message) {
+		try { Thread.sleep(10000); } catch(Exception e) { }
+	}
+}
+```
+
+
 
 <br>
 <br>
