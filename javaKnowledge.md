@@ -1,4 +1,4 @@
-<meta http-equiv='Content-Type' content='text/html; charset=utf-8' />
+<meta http-equiv='Content-Type' content='text/html; charset=euc-kr' />
 
 <h3>Java 내용 정리</h3>
 
