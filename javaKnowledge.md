@@ -596,7 +596,19 @@ class LongRunningActor extends UntypedActor {
 
 <br>
 <br>
-<h4></h4>
+<h4>Garbage collection</h4>
+
+* Serial GC(-XX:+UseSerialGC) 
+Young 영역의 GC는 일반적인 GC와 마찬가지로 eden, suv1, suv2를 통해 GC를 수행한다. Old 영역에서의 GC는 Mark -> Sweep -> Compact 단계로 나누어서 수행한다. 먼저 살아 있는 객체를 식별하여 표시(Mark)한 후 힙 메모리의 앞부분부터 확인하여 살아있는 객체만 남긴다(Sweep). 마지막으로 객체들이 연속되게 쌓이도록 힙 메모리의 앞부붙부터 채워서 메모리를 정리한다(Compaction). Serial GC는 하나의 쓰레드에서 동작하므로 실제 운영서버에서는 일반적으로 사용 안하는 방식이다. 
+
+* Parallel GC(-XX:+UseParallelGC) 
+Serial GC와 기본적인 알고리즘은 같으나 복수개의 쓰레드를 활용하므로 메모리가 충분하고 코어의 개수가 많으면 좋은 효율을 가지는 방법이다. 
+
+* CMS GC(-XX:+UseConcMarkSweepGC) 
+Old 영역의 GC를 Initial Mark -> Concurrent Mark -> Remark -> Concurrent Sweep 단계로 나누어서 수행한다. 먼저 Initial Mark에서는 클래스 로더에서 가장 가까운 객체 중 살아있는 객체만 찾는 것으로 끝낸다. 때문에 Stop the world 시간이 굉장히 짧다. 이 후 Concurrent Mark에선 방금 살아있다고 확인한 객체에서 참조하고 있는 객체들을 따라가면서 확인한다. 이 때, 멀티 쓰레드로 동시에 진행이 된다. 그 다음 Remark에선 Concurrent Mark 단계에서 새로 추가되거나 참조가 끊긴 객체를 확인하고 마지막 Concurrent Sweep에서 객체들을 정리한다. 마찬가지로 멀티 쓰레드로 동시 진행이 된다. 이 방식은 Stop the world 시간이 굉장히 짧지만.. Compaction 단계가 없기 때문에 나중에 메모리를 한 번에 정리할 때 프로세스가 굉장히 오랫동안 멈추게 된다는 단점이 있다. 
+
+* G1 GC 
+이 방식은 기존 Young, Old 영역에 따른 GC를 수행하는 방식이 아닌 전혀 새로운 방식으로 메모리를 바둑판 처럼 나눠 객체에게 각 바둑판 영역을 할당한다. 해당 영역이 꽉차면 다른 영역에서 객체를 할당하고 해당 영역은 GC를 수행하는 방식이다.
 
 <br>
 <br>
