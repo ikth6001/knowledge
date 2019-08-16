@@ -1,3 +1,5 @@
+<meta http-equiv='Content-Type' content='text/html; charset=euc-kr' />
+
 <h3>Java 내용 정리</h3>
 
 
@@ -131,7 +133,7 @@ Arrays.asList(1,2,3).stream()
 * 쓰레드 덤프의 정보
    * 쓰레드 이름 : 덤프 가장 첫줄의 pool-1-thread-13 가 쓰레드 이름이 된다.
    * 우선 순위 : 쓰레드의 우선순위로 첫 줄의 prio=6 이 우선순위를 의미한다.
-   * 쓰레드 ID : 쓰레드의 ID로, 이 정보를 통해 쓰레드의 CPU 사용, 메모리 사용 등의 유용한 정보를 알 수 있다.
+   * 쓰레드 ID : 쓰레드의 ID로, 이 정보를 통해 쓰레드의 CPU 사용, 메모리 사용 등의 유용한 정보를 알 수 있다. tid는 java에서 쓰레드를 만들 때 부여하는 ID이고, nid는 native id로 운영체제에 dependency가 있는 OS가 부여하는 ID이다.
    * 쓰레드 상태 : 쓰레드의 상태를 의미한다. 첫 줄의 runnable [0x...] 가 쓰레드 상태이다.
    * 쓰레드 콜스택 : 쓰레드의 스택 트레이스를 의미한다.
 
@@ -494,11 +496,119 @@ public static void main(String[] args) {
 
 <br>
 <br>
-<h4></h4>
+<h4>동시성</h4>
+
+* **Junit은 기본적으로 Main 스레드의 실행이 끝나면 프로세스를 종료 해버린다.** 때문에 테스트를 위해선 Runnable 객체가 Main 스레드에서 실행하도록 하거나 다른 스레드가 끝날 때까지 Main 스레드가 기다리도록 해야한다.
+
+* Atomic 클래스는 원자 연산을 보장하는 클래스를 의미한다. 즉 다른 스레드는 모두 메서드 호출이 완료될 때까지 이 클래스의 참조가 수정되지 않음이 보장된다. 아래 예제는 AtomicInteger 객체를 사용한 예제로 synchronized 블록을 사용 안해도 값이 보장됨을 알 수 있다.
+```
+@Test
+public void atomicSharedState() {
+	final ExecutorService executorService= Executors.newCachedThreadPool();
+	final AtomicCounter c= new AtomicCounter();
+	executorService.execute(new CounterSetter(c));
+	
+	final int vlaue= c.getNumber().incrementAndGet();
+	assertEquals(1, value); // synchronized 블록으로 감싸지 않아도 값이 보장된다.
+}
+
+class CounterSetter implements Runnable {
+	private final AtomicCounter counter;
+	
+	...
+	@Override
+	public void run() {
+		while(true) {
+			counter.getNumber().set(0);
+		}
+	}
+}
+
+class AtomicCounter {
+	private final AtomicInteger number= new AtomicInteger(0);
+	
+	public AtomicInteger getNumber() {
+		return number;
+	}
+}
+```
+
+* Akka란 메시지를 처리(분산/전달)하도록 설계된 프레임워크로 스레드와 락의 동시성에 신경쓸 필요 없이 메시지의 흐름에만 집중할 수 있도록 도와준다. 큰 장점 중 두 가지를 살펴보자.
+	* 고장 방지 처리 : Akka를 사용하면서 메시지를 수신하는 액터의 고장에 대하여 송신하는 액터는 신경쓸 필요가 없다. 아래 코드를 보자. DividnigActor에 문제가 생기더라도 Strategy에 따라 새로운 Actor가 자동생성 되고 문제를 일으키는 CrashActor는 이 사실조차 모르는 상태에서 메시지를 송신 및 수신할 수 있다.
+	* 높은 동시 처리 능력 : Akka를 사용하면서 메시지를 동시 처리할 때 Lock과 같은 부분에 대하여 사용하는 클라이언트 코드는 신경 쓸 필요가 없다. 아래 코드를 보면 Router를 통해 라운드 로빈 방식으로 각 액터에게 메시지를 병렬로 수신함을 볼 수 있다. Router를 사용 안 할 경우 각각의 메시지가 순서대로 10초씩 기다리면서 수신하게 된다.
+```
+class CrashActor extends UntypedActor {
+	public static void main(String[] args) {
+		final ActorSystem system= ActorSystem.create("actorSystem");
+		
+		final ActorRef crashRef= system.actorOf(Props.create(ActorCrash.class));
+		final ActorRef dividingActorRef= System.actorOf(Props.create(DividingActor.class));
+		
+		dividingActorRef.tell(5, crashRef);
+		dividingActorRef.tell(0, crashRef);	// dividingActor에 문제가 발생하게 되는 메시지
+	}
+}
+
+class DividingActor extends UntypedActor {
+	@Override
+	public void onReceive(Object message) {
+		iInteger number= (Integer) message;
+		this.getSender().tell(10 / number, getSelf());	// 메시지로 0 수신 시, 에러 발생. 하지만 Exception 처리 안 함
+	}
+	
+	@Override
+	public SupervisorStrategy supervisorStrategy() {
+		return enw OneForOneStrategy(10, Duration.Inf(),
+			new Function<Throwable, SupervisorStrategy.Directive>() {
+				return SueprvisorStrategy.restart();	// exception 발생 시, Actor를 새로 생성
+			}
+	}
+}
+```
+
+```
+class MultiActors {
+	public static void main(String[] args) {
+		final ActorSystem system= ActorSystem.create("actorSystem");
+		//	final ActorRef ref= system.actorOf(Props.create(LongRunningActor.class));
+		final ActorRef ref= system.actorOf(Props.create(LongRunningActor.class))
+					  .withRouter(new RoundRobinRouter(3)));
+		
+		System.out.println("Sending message 1");
+		ref.tell("Message1", null);
+		System.out.println("Sending message 2");
+		ref.tell("Message2", null);
+		System.out.println("Sending message 3");
+		ref.tell("Message3", null);
+	}
+
+}
+
+class LongRunningActor extends UntypedActor {
+	@Override
+	public void onReceive(Object message) {
+		try { Thread.sleep(10000); } catch(Exception e) { }
+	}
+}
+```
+
+
 
 <br>
 <br>
-<h4></h4>
+<h4>Garbage collection</h4>
+
+* Serial GC(-XX:+UseSerialGC) 
+Young 영역의 GC는 일반적인 GC와 마찬가지로 eden, suv1, suv2를 통해 GC를 수행한다. Old 영역에서의 GC는 Mark -> Sweep -> Compact 단계로 나누어서 수행한다. 먼저 살아 있는 객체를 식별하여 표시(Mark)한 후 힙 메모리의 앞부분부터 확인하여 살아있는 객체만 남긴다(Sweep). 마지막으로 객체들이 연속되게 쌓이도록 힙 메모리의 앞부붙부터 채워서 메모리를 정리한다(Compaction). Serial GC는 하나의 쓰레드에서 동작하므로 실제 운영서버에서는 일반적으로 사용 안하는 방식이다. 
+
+* Parallel GC(-XX:+UseParallelGC) 
+Serial GC와 기본적인 알고리즘은 같으나 복수개의 쓰레드를 활용하므로 메모리가 충분하고 코어의 개수가 많으면 좋은 효율을 가지는 방법이다. 
+
+* CMS GC(-XX:+UseConcMarkSweepGC) 
+Old 영역의 GC를 Initial Mark -> Concurrent Mark -> Remark -> Concurrent Sweep 단계로 나누어서 수행한다. 먼저 Initial Mark에서는 클래스 로더에서 가장 가까운 객체 중 살아있는 객체만 찾는 것으로 끝낸다. 때문에 Stop the world 시간이 굉장히 짧다. 이 후 Concurrent Mark에선 방금 살아있다고 확인한 객체에서 참조하고 있는 객체들을 따라가면서 확인한다. 이 때, 멀티 쓰레드로 동시에 진행이 된다. 그 다음 Remark에선 Concurrent Mark 단계에서 새로 추가되거나 참조가 끊긴 객체를 확인하고 마지막 Concurrent Sweep에서 객체들을 정리한다. 마찬가지로 멀티 쓰레드로 동시 진행이 된다. 이 방식은 Stop the world 시간이 굉장히 짧지만.. Compaction 단계가 없기 때문에 나중에 메모리를 한 번에 정리할 때 프로세스가 굉장히 오랫동안 멈추게 된다는 단점이 있다. 
+
+* G1 GC 
+이 방식은 기존 Young, Old 영역에 따른 GC를 수행하는 방식이 아닌 전혀 새로운 방식으로 메모리를 바둑판 처럼 나눠 객체에게 각 바둑판 영역을 할당한다. 해당 영역이 꽉차면 다른 영역에서 객체를 할당하고 해당 영역은 GC를 수행하는 방식이다.
 
 <br>
 <br>
