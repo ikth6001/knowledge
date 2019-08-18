@@ -314,7 +314,12 @@ Logical Volume Manager의 약자로 논리 하드디스크 관리자라고 할 �
 <br>
 <br>
 
-<h4></h4>
+<h4>리눅스 프로세스의 상태</h4>  
+
+* Running/Runnable(R) : running 상태는 CPU를 점유한 프로세스를 의미하고, runnable은 실행 준비가 끝나 CPU를 점유하기 위해 기다리는 상태를 의미한다(CPU점유는 priority에 따라 점유 순서가 정해진다)
+* Sleeping(S, D) : IO 동작과 같은 사용할 resource를 기다리는 상태를 의미한다. Interruaptable(S)과 Uninterruaptable(D) 상태로 나뉘는데 Interruptable은 signal을 통해 Sleep 상태를 깨울 수 있는 것을 의미한다.
+* Stopped(T) : SIGSTOP(e.g. ctrl + z) signal을 받아 멈춰있는 상태를 의미한다.
+* Zombie(Z) : 보통 프로세스는 exit 시스템함수를 호출함으로써, 프로세스를 종료한다. 그리고 자신의 모든 자원을 해제 시키게 된다. 그러나 프로세스의 exit status 상태와 PID는 여전히 남아서(커널의 task struct에) 유지되게 된다. 이렇게 하는 몇가지 이유가 있는데, 이렇게 함으로써 부모 프로세스는 자식프로세스에 대한 종료상태등을 가져올수 있어서 자신의 자식프로세스가 어떤 상태로 작업을 마쳤는지에 대한 정보를 확인할수 있기 때문이다. 만약 프로세스가 exit 를 호출하는 즉시 모든 자원을 되돌려줌과 동시에 커널에서 task struct 에서 프로세스 정보를 삭제시켜 버린다면, 부모프로세스는 자신의 자식 프로세스가 어떤 상태로 종료되었는지 알수 없게 될것이다.
 
 <br>
 <br>
