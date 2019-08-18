@@ -1,4 +1,4 @@
-<h3>스레드와 락</h3>
+<h3>기타 정보</h3>
 
 <h4>프로세스 vs 쓰레드</h4>
 
@@ -61,7 +61,11 @@ class Foo {
 
 <br><br>
 
-<h4></h4>
+<h4>마이크로서비스 아키텍처의 트랜젝션</h4>  
+
+* 2PC : 2PC는 coordinator가 있어 각 노드들의 commit 준비 여부를 취합하여 commit/rollback을 결정한다. 그리고 이 coordinator는 보통 WebServer가 역할을 하게 된다. 하지만 만약 분산환경에서 이 coordinator 서버가 다운된다면?? 나머지 노드들이 어떻게 해야 하는지에 대한 방안이 없다. kafka에서는 2PC를 사용하는데 kafka에서는 모든 노드들이 coordinator가 될 수 있다고 한다(확실 X) 또한 2PC는 synchronouse한 작업이다. 만약 한 노드가 prepare가 완료되어 commit을 기다리지만, 만약 다른 트랜젝션에서 해당 row를 변경한다면?? commit에 실패하게 된다(때문에 shared lock을 쓰는데.. 성능..)
+
+* SAGA : SAGA패턴은 event 기반의 트랜젝션 표준으로 async하고 reactive한 표준이다. 각 서비스 API는 로컬 트랜잭션이고 선행 API는 처리완료 후 event를 publish한다. 후행 API는 event를 받으면 업무처리를 수행한다. 만약 실패하면 실패 event를 발행하고, 선행 API는 보상거래를 수행하게 된다. 하지만 dirty read가 발생할 수 있다. 예를 들어 commit을 한 이후 보상거래가 발생하게 되면 추가된 row가 사라지기 때문이다.
 
 <br><br>
 
