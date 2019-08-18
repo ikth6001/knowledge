@@ -22,8 +22,53 @@ finally는 try-catch-finally에 사용되는, try 구문 또는 catch 구분이 
 finalize는 메서드로써, garbage collector가 해당 객체를 메모리에서 삭제하겠다고 결정되는 순간 호출되는 메서드이다.
 <br>
 <br>
-<h4>TreeMap, HashMap, LinkedHashMap의 차이</h4>
-HashMap은 검색 및 삽입에 O(1)이 소요되고, 연결리스트로 이루어진 배열로 구성되어 있다. Hash키는 무작위로 섞여있어 순서가 보장 안된다. TreeMap은 검색 및 삽입에 O(logN)이 소요되고 키는 정렬(Comparable 구현 필수)되어 있으므로(레드-블랙 트리로 구현) 정렬된 순서로 키 순회가 가능하다. LinkedHashMap 검색 및 삽입에 O(1)이 소요되고, 양방향 연결 버킷으로 구현되어 있어 키는 삽입한 순서대로 정렬되어 있다.
+<h4>Java의 Map 구현체</h4>  
+
+	1. HashMap
+	해쉬테이블로 구현. key 또는 val의 순서가 보장 안된다.
+	또한 해쉬코드 충돌 시 생기는 LinkedList(또는 Tree)가 커지만 검색 효율이 O(1)을 보장 못하게 된다.
+	이럴 땐 해쉬테이블 배열의 크기를 두배로 늘린 후 해쉬를 다시 계산하는 rehashing 작업을 하게 된다.
+
+	2. TreeMap
+	red-block(Tree의 밸런스를 조절 해주는 자료구조로, AVL트리 라고 생각하면 될듯) 트리로 구현. 
+	key값이 정렬 되어있음이 보장된다. 대신 key가 되는 object는 Comparable이어야 한다.
+	
+	3. LinkedHashMap
+	HashMap을 상속한 자료구조로, Map에 삽입한 순서가 보장된다.(LinkedList를 통해 삽입 시 순서대로 키를 add하는 방식)
+	
+	4. Hashtable
+	HashMap과 다르게 synchronized하여 멀티 쓰레드 환경에서 사용이 가능하다. synchronized 메소드를 통해
+	thread safe 하지만 성능이 떨어진다.
+	
+	5. Concurrent HashMap
+	lock striping 이라는 방식으로 thread safe 하면서 Hashtable 보다 더 좋은 성능을 낸다.
+	Hashtable처럼 메소드 전체를 synchronized 하지 않고 내부적으로 데이터부를 여러 개의 세그먼트로 분리하고
+	각 세그먼트 별로 동기화를 하는 방식이다. 아래 코드와 같은 방식이라고 생각할 수 있다.
+	
+	// Hashtable 방식
+	class SharedData {
+		private int intData;
+		private boolean boolData;
+
+		public synchronized int getInt() { return intData; }
+		public synchronized void setInt(int n) { intData = n; }
+		public synchronized boolean getBool() { return boolData; }
+		public synchronized void setBool(boolean b) { boolData = b; }
+	};
+	
+	// Concurrent HashMap
+	class SharedData {
+		private int intData;
+		private boolean boolData;
+		private Object intSync = new Object();
+		private Object boolSync = new Object();
+
+		public int getInt() { synchronized (intSync) { return intData; } }
+		public void setInt(int n) { synchronized (intSync) { intData = n; } }
+		public boolean getBool() { synchornized (boolSync) { return boolData; } }
+		public void setBool(boolean b) { synchronized (boolSync) { boolData = b; } }
+	}
+	
 <br>
 <br>
 <h4>Lambda expression</h4>
