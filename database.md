@@ -154,7 +154,160 @@ CF가 좋을 확률이 높다. 왜냐하면 object_id로 정렬하여 테이블�
 
 <br><br>
 
-<h4></h4>
+<h4>오라클 튜닝 교육 2일차</h4>  
+
+* 실행계획을 세우는 옵티마이저는 두가지로 구성된다.
+1. 룰 기반 옵티마이저 : 룰을 기반으로 실행계획을 세운다(@deprecated)
+2. 통계(비용) 기반 옵티마이저 : 통계 정보를 기반으로 실행계획을 세운다. 통계 정보엔 테이블 인덱스 기반 row, CF 등등의 정보 포함
+	- Selectivity : 조건을 만족하는 데이터가 차지하는 비율
+	- Cardinality : Selectivity * 전체 데이터
+	- Cost : Selectivity, Cardinality를 통해 구한 비용
+
+
+* 인덱스의 종류
+1. B Tree : 이진트리 형태로 구성되는 인덱스. 실제 컬럼 값을 인덱스에도 보관하고 있어야 하기에 대용량 데이터 관리시 부담이 되고 컬럼 값의 분포도가 좋아야 효율을 발휘할 수 있다.
+2. BitMap : bit 값으로 만들어진 인덱스. 컬럼 값에 대하여 특정 값이 있는 시작점부터 끝나는 점까지 위치를 기록한 후 bit 데이터로 변경. (사용하는 메모리가 적고, 컬럼 값이 남자, 여자 와 같이 분포도가 적은 데이터에 사용). DML 발생시 부하가 굉장히 크다. single block IO를 사용하는건 B Tree와 같지만 데이터가 모여있어 성능이 좋음.
+3. Reverse Key : 기본적으로 B Tree 인덱스와 마찬가지로 이진트리로 구성한다. 하지만 예를 들어 사원번호 컬럼이 B Tree 인덱스인 경우 사원 번호는 계속 증가하므로 이진트리의 우측 leaf에 계속 데이터가 쌓여 경합이 발생하게 된다. 이러한 한쪽으로의 데이터 경합을 방지하기 위한 방법으로 reverse key는 인덱스 컬럼의 값을 거꾸로 바꾸어 저장한다. 예를 들어 사원번호가 12345이면 54321로 만들어 저장하는 것이다.
+4. Function Based : 오라클은 묵시적으로 형변환을 해주는데(예를 들어 VARCHAR2 컬럼에 조건으로 = 10과 같이 한 경우 컬럼의 문자를 숫자로 변경. 숫자가 문자보다 우선순위 높음) 이런 묵시적 형변환 때문에 인덱스 컬럼이 가공되면거나 부정(<>) 비교 조회 시, 인덱스를 사용 안하게 된다. Function Based는 어쩔 수 없이 인덱스 컬럼에 가공을 해야할 경우 해당 가공한 데이터를 인덱스로 만드는 방법이다. DML 성능 저하 및 인덱스 유연성이 저하된다.
+
+
+* 인덱스 선정
+테이블 아키텍처 선정 > 엑세스 Path 검토 > 결합/단일 인덱스 고려 > 인덱스 선정 > 검토
+
+
+* 랜덤 엑세스(인덱스에 작성되어 있는 rowId를 통해 테이블 데이터에 접근하는 것)의 종류
+1. 추출 랜덤 엑세스(COL3, COL4) : WHERE COL3='AAA' AND COL4='BBB'
+2. 확인 랜덤 엑세스(COL3, COL5) : WHERE COL3='AAA' AND COL4='BBB' AND COL5 LIKE 'AA%'
+3. 정렬 랜덤 엑세스(COL3, COL4) : WHERE COL3='AAA' AND COL4='BBB' ORDER BY COL5
+
+
+* 조건절의 순서
+equal 비교를 점조건, 범위 비교(between)을 선조건이라고 한다. and 절로 복 수개의 조건이 올 경우 점 조건이 선조건보다 앞에 오는 것이 더 효율이 좋다.
+
+* 뷰
+뷰는 복잡한 테이블 관계를 간단한 SQL로 확인할 수 있도록 하는 오브젝트. 뷰는 실제로 데이터를 저장하는 것이 아니라 이 뷰를 보여주기 위한 SQL 정보를 저장한다.
+
+* 실행 계획 보기
+(본 교육에선) DBMS_XPLAN 패키지에서 제공하는 DISPLAY와 DISPLAY_CURSOR 기능을 사용하여 실행계획을 확인한다.
+1. DISPLAY : 예상 실행 계획을 보여주는 function
+2. DISPLAY_CURSOR : 실제 실행한 실행 계획을 보여주는 function
+
+
+* 실행 계획 정보
+1. Predicate information - access : 실제 조회 데이터 대상을 줄이는 컬럼(인덱스에 포함)
+2. Predicate information - filter : access를 통해 줄인 데이터 대상을 실제 테이블 access 하면서 실제 조건에 맞는 데이터를 찾는데 사용된 컬럼
+
+
+* 실행 계획 보기 예시(1)
+
+1. SQL
+```
+SELECT /* KTH */ *
+FROM SCOTT.DEPT A, SCOTT.EMP B
+WHERE A.DEPTNO = B.DEPTNO
+AND B.EMPNO = 7566;
+```
+
+2. 실행 계획
+```
+SQL_ID  0typ7yyk05p9f, child number 0
+-------------------------------------
+SELECT /* KTH */ * FROM SCOTT.DEPT A, SCOTT.EMP B WHERE A.DEPTNO = 
+B.DEPTNO AND B.EMPNO = 7566
+ 
+Plan hash value: 2385808155
+ 
+----------------------------------------------------------------------------------------
+| Id  | Operation                    | Name    | Rows  | Bytes | Cost (%CPU)| Time     |
+----------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT             |         |       |       |     2 (100)|          |
+|   1 |  NESTED LOOPS                |         |     1 |    59 |     2   (0)| 00:00:01 |
+|   2 |   TABLE ACCESS BY INDEX ROWID| EMP     |     1 |    39 |     1   (0)| 00:00:01 |
+|*  3 |    INDEX UNIQUE SCAN         | PK_EMP  |     1 |       |     0   (0)|          |
+|   4 |   TABLE ACCESS BY INDEX ROWID| DEPT    |     4 |    80 |     1   (0)| 00:00:01 |
+|*  5 |    INDEX UNIQUE SCAN         | PK_DEPT |     1 |       |     0   (0)|          |
+----------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   3 - access("B"."EMPNO"=7566)
+   5 - access("A"."DEPTNO"="B"."DEPTNO")
+```
+
+3. 해석할 땐 가장 깊은 depth 부터 읽고 동일 depth 끼린 가장 위부터 읽는다.
+
+- EMP에서 PK_EMP unique index를 통해 인덱스 스캔(3 라인)
+- 인덱스 스캔 으로부터 테이블에 row Id access(2 라인)
+- DEPT의 PK_DEPT unique index로부터 인덱스 스캔(실제 데이터가 4개 인데 1개만 읽음 -> join 때문임 TOBE 설명)
+- 인덱스 스캔 으로부터 테이블에 row Id access(4 라인)
+- NESTED LOOPS : TOBE 설명(1 라인)
+- 조회(0 라인)
+
+
+* 실행 계획 보기 예시(2)
+
+1. SQL
+```
+SELECT /* KTH(2) */ *
+FROM SCOTT.EMP
+WHERE DEPTNO = 30
+ORDER BY EMPNO, ENAME;
+```
+
+2. 실행 계획
+```
+SQL_ID  31a2japg8t3gn, child number 0
+-------------------------------------
+SELECT /* KTH(2) */ * FROM SCOTT.EMP WHERE DEPTNO = 30 ORDER BY EMPNO, 
+ENAME
+ 
+Plan hash value: 150391907
+ 
+-----------------------------------------------------------------------
+| Id  | Operation          | Name | E-Rows |  OMem |  1Mem | Used-Mem |
+-----------------------------------------------------------------------
+|   0 | SELECT STATEMENT   |      |        |       |       |          |
+|   1 |  SORT ORDER BY     |      |      4 |  2048 |  2048 | 2048  (0)|
+|*  2 |   TABLE ACCESS FULL| EMP  |      4 |       |       |          |
+-----------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   2 - filter("DEPTNO"=30)
+ 
+Note
+-----
+   - Warning: basic plan statistics not available. These are only collected when:
+       * hint 'gather_plan_statistics' is used for the statement or
+       * parameter 'statistics_level' is set to 'ALL', at session or system level
+```
+
+3. 해석
+- 정렬을 했기 때문에 메모리를 사용함(1 라인)
+
+4. 튜닝 방안
+DEPTNO, EMPNO, ENAME 컬럼을 가지는 인덱스를 생성한다.
+
+
+* Index full scan 과 Index fast full scan
+1. Index full scan은 single Block IO로 전체 인덱스를 스캔하여, 정렬이 유지된다.
+2. Index fast full scan은 multi Block IO로 전체 인덱스를 스캔하여, 정렬이 유지되지 않는다. 단, unique, not null 이어야 한다.
+
+* 단일 인덱스가 많은 경우 실행 계획에 AND EQUALS 라고 뜨는 경우가 있는데 기본적으로 조회 시, 복수 개의 인덱스를 사용하지 않으므로 먼저 하나의 인덱스에서 찾은 후 다음 인덱스로 이동해 찾으므로 성능이 더 느림.(따라서 복합 인덱스를 쓰자..)
+
+* SKIP SCAN(http://www.gurubee.net/lecture/2266)
+예를 들어, 다음과 같은 쿼리가 있다.
+```
+SELECT * FROM TABLE WHERE COLA='A'
+```
+하지만 인덱스가 COLA, COLB 컬럼인 경우엔 인덱스를 통한 조회를 안하게 된다. WHERE 절에서는 COLA만 사용 했으므로... 과거엔 이를 해결하기 위해 아래와 같이 쿼리를 작성하기도 했다.
+```
+SELECT * FROM TABLE WHERE COLA='A' AND COLB IN (전체 COLB 데이터)
+```
+이렇게 하면 인덱스를 사용하게 된다. 당연하겠지만 이 방식을 사용하는데엔 COLB 데이터의 분포도가 좁은 것이 유리하다(예를 들어 성별 테이블)
+
 
 <br><br>
 
