@@ -57,7 +57,100 @@ isolation level이 높다고 무조건 좋은것이 아님. isolation level이 �
 
 <br><br>
 
-<h4></h4>
+<h4>오라클 튜닝 교육 1일차</h4>  
+
+* 오라클 딕셔너리 테이블  
+1. DBA_ : 모든 Admin 권한을 가진 계정만 접근 가능
+2. ALL_ : 사용자가 접근 가능한 범위 내의 뷰
+3. USER_ : 사용자 계정에 존재하는 뷰
+
+
+* SQL 작성 시 대/소문자, 공백을 통일하는 이유는 오라클이 동일 SQL인지 판단할 수 있도록 하기 위해서이다. 동일성을 판단 함으로써 SQL 하드/소프트 파싱 사용 여부에 영향을 끼친다.  
+1. 하드파싱 : SQL과 실행계획을 캐시에서 찾지 못해 최적화 과정을 거치고 나서 실행단계로 넘어가는 경우
+2. 소프트파싱 : SQL과 실행계획을 캐시에서 찾아 곧바로 실행단계로 넘어가는 경우  
+
+
+* DELETE, TRUNCATE, DROP 차이
+DELETE는 수행하더라도 실제 데이터를 테이블 스페이스에서 바로 삭제 안하므로 복구가 가능하지만 TRUNCATE는 복구가 불가능하다. 때문에 실제로 DELETE를 오랜시간 한 테이블은 SELECT COUNT를 할 때, 시간이 오래 걸릴 수 있다. 이 문제를 해결하기 위해선 테이블스페이스를 정리해주어야 함(alter tablespace ${name} coalesce) DROP은 데이터뿐 아니라 테이블까지 삭제하며, 복구가 불가능하다.
+
+
+* 오라클 인스턴스가 하나 생성되면 오라클은 데이터베이스(디스크)와 이를 엑세스하는 프로세스가 생성된다. 그리고 각 인스턴스들이 공통으로 사용하는 
+공유 메모리 캐시 영역(SGA)가 있다. SGA 영역이 튜닝 시점에 관심을 가져야 하는 부분임. 인스턴스는 SGA + 백그라운드 프로세스로 구성됨. 오라클의 전체적인 구조는 아래와 같다.  
+
+![oracleStructure](images/database/oracleStructure.PNG?raw=true "oracleStructure")
+
+
+* SGA는 다음과 같이 구성 된다.
+1. Shared Pool
+	- Library Cache : SQL에 대한 실행 계획을 만들고 저장한다.
+	- Data dictionary : 오브젝트 권한 정보를 디스크를 통해 가져오면 오래 걸리므로, 메모리에 캐쉬 해놓는다.
+2. Database buffer cache : 기본 조회성 쿼리 데이터를 캐쉬하고 있는다. 없으면 디스크로부터 가져온다.(LRU 캐쉬)
+	- DB_CACHE_SIZE : Database buffer cache의 크기 정보를 가진 파라미터(변수)
+	- DB_BLOCK_SIZE : 오라클에서 다루는 가장 작은 크기의 데이터 단위인 블락의 크기 정보를 가진 파라미터(변수)
+	...
+3. Redo log buffer : 실제 명령어를 실행하기 전 데이터 변경에 대한 로그 기록. 명령어 수행 중 장애로 인해 DB가 죽으면 해당 데이터 변경에 대하여 Commit을 수행 했는지 확인하고, Commit을 안하면 다시 Rollback 처리를 한다. Redo log buffer의 데이터는 disk의 Redo log file에 작성 되는데, 설정에 의해 Redo log file의 갯수는 정해져 있는데, Redo log file이 전부 꽉 차면, Redo log file 갯수가 늘어나는게 아니라 덮어쓰게 되는데, 이 때 Archive log를 사용한다.
+
+
+* 오라클 ASM이란 오라클에서 파일들이 저장되는 Storage를 관리하는 방식을 의미한다. 오라클에선 OS가 아닌 이 ASM에게 데이터 저장/불러오기 요청을 하고, 성능 및 편의성이 향상 되었다.
+
+
+* 오라클 Connection 첫 접속 시 리스너에 연결 요청을 하면 인스턴스를 띄우고 인스턴스가 사용할 PGA 메모리를 할당한다(부하가 큰 작업). 이 후 요청은(연결이 끊기지 않은 상태) 바로 인스턴스에 요청을 통해 SQL 작업을 하게 된다. 때문에 접속을 끊지 않고 Connection Pool을 만들어 사용한다.
+
+
+* 고 가용성을 위한 오라클 기능  
+1. HA : 두 대의 DBMS 서버를 구성하고 하나는 Active 하나는 Standby로 설정하여 Active 서버가 다운되면 Standby를 이어서 사용할 수 있도록 구성하는 방법이다. Standby 서버는 사용안되는데 비해 Active 서버는 바쁜 상태이기 때문에 효율이 좋지 못하다.  
+2. OPS : HA의 단점을 보완한 방법으로 하나의 Storage 공간과 두 개의 인스턴스가 있고 두 인스턴스 모두 Active 상태로써 효율을 높이는 방법이다. 하지만 RAC Ping이란 문제가 발생할 수 있다. RAC Ping이란 인스턴스 A가 데이터를 변경하고 완료했을 때 인스턴스 B가 그 내용을 조회한다면 인스턴스 A가 디스크에 반영을 완전히 한 후에 인스턴스 B가 가져올 수 있다는 의미로 성능저하의 원인이 된다.  
+3. RAC : OPS의 RAC Ping 문제를 해결한 방법으로, 인스턴스 A와 인스턴스 B를 연결하는 interconnect라는 구성을 추가하여 데이터 접근을 위해 디스크에 접근 안하고 각 인스턴스의 메모리의 데이터를 interconnect를 통해 교환하는 구조이다.
+
+
+* 버퍼 캐시 구조
+1. 버퍼 블록을 변경하면, 해당 블록은 Dirty 블럭으로 변경되고 버퍼를 지우면 Free 블럭으로 변경된다. 처음 SGA를 구성하여 깨끗한 블럭을 Free 블럭이라고 한다.
+
+
+* Redo는 Redo로그의 엔트리를 의미한다. Redo는 Database/Cache Recovery, Fast Commit을 위해 사용한다. Fast Commit 이란 데이터를 실제 디스크에 반영은 안하고 반영한다고 마킹만 해놓고, 백그라운드로 디스크 반영 작업을 하는 것을 말한다.
+
+
+* 실행 계획(AUTO TRACE)
+1. 예상 실행 계획 : 예상되는 실행 계획( EXPLAIN PLAN FOR > SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY) )
+2. 실제 실행 계획 : 실행하여 구한 실행 계획( SET AUTOTRACE ON )
+
+
+* ROWID : 데이터가 저장된 주소(데이터에 접근하기 위한), ROWNUM : 쿼리 결과 데이터 Row에 채번한 것.
+
+
+* 인덱스를 통한 검색 시엔, 인덱스를 통해 하나의 블럭 주소를 파악 및 접근(Single Block IO)한 후, 데이터를 가져오는 방식을 사용하고, 인덱스를 사용 안할 경우, 한 번에 복수 개의 블럭을 한 번에 접근(Multi Block IO)하여 데이터를 가져온다. 때문에, 전체 데이터의 극히 일부, 적은 데이터를 가져오는 경우엔 인덱스 검색이 효율적이지만 대부분의 데이터를 가져올 땐, 인덱스 없이 한 번에 많은 블럭에 접근하여 검색하는 것이 유리하다(I/O횟수가 줄어들기 때문).
+
+
+* ORDER/GROUP BY 사용시 PGA 메모리를 기본적으로 사용하고 PGA가 모자라면 TEMP 영역을 사용한다. 때문에 정렬되어있는 인덱스를 사용하면 빨라질 수 있다.
+
+
+* 병렬 프로세싱
+```
+(/*+ full(${테이블}) parallel(${테이블} ${프로세스 수} */
+```
+내부적으로 DBMS가 프로세스를 띄워 작업을 병렬적으로 수행하는 것을 의미한다. 또는 다음과 같이 사용할 수 있다. 
+```
+/*+ index_ffs(${테이블}) parallel_index(...) */
+```
+여기서 index_ffs 힌트는 index를 디스크로부터 가져올 때, single block io를 사용 안하고 multi block io를 사용한다는 의미이다. 대신 인덱스를 통한 순서를 보장할 수 없다.
+
+
+* Clustering Factor : 디스크 블럭으로부터 데이터를 가져올 때, 인덱스 A, 인덱스 B가 같은 블럭일 경우 두 번 disk에 접근할 필요 없이 한 번만
+접근하면 된다. 이런 경우 Clustering Factor = 1이라고 한다. 하지만 A, C는 같은 블럭, B는 다른 블럭인 경우엔 CF=3이 된다.
+```
+SQL>	create table t
+	as
+	select * from all_objects
+	order by object_id;
+
+SQL>	create index t_object_id_idx on t(object_id);
+```
+CF가 좋을 확률이 높다. 왜냐하면 object_id로 정렬하여 테이블에 insert한 후, 해당 컬럼으로 인덱스를 만드므로, 인덱스 순서대로 disk의 블록에 저장될 확률이 높기 때문이다.
+
+
+* 오라클 옵티마이저는 규칙/비용 기반 두가지 방식으로 실행계획을 생성 하는데, 비용 기반 방식을 사용 하려면 여러가지 통계 정보가 필요하다.
+이 통계 정보를 생성하려면, EXEC DBMS_STATS.GATHER_TABLE_STATS('${유저}', '${테이블}'); 명령을 수행한다.
+
 
 <br><br>
 
