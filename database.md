@@ -418,7 +418,145 @@ SELECT * FROM TABLE WHERE COLA='A' AND COLB IN (전체 COLB 데이터)
 
 <br><br>
 
-<h4></h4>
+<h4>오라클 튜닝 교육 5일차</h4>  
+
+* 튜닝 예제
+
+-- 인덱스
+create index tmp_1idx on tmp(col1,col2);
+
+-- 튜닝 대상 SQL
+select * from (
+    select col1, col2, col3
+    from scott.tmp 
+    where  col1  >= 9789 and
+           col2  >= 5500
+    order by col1 desc, col2)
+where rownum <=100;
+
+-- 정답
+select *
+from(
+    select /*+ ordered use_nl(v1, v2) */ v1.col1, v1.col2, v2.col3
+    from(
+        select *
+        from(
+            select /*+ INDEX_DESC(tmp tmp_1idx) */col1, col2
+            from tmp
+            where col1 >= 9789 and
+                  col2 >= 5500
+            order by col1 desc)
+        where rownum <= 100) v1, tmp v2
+    where v1.col1 = v2.col1 and
+          v1.col2 >= 5500)
+where rownum <= 100
+order by col1 desc, col2;
+
+-- 튜닝 기본 아이디어
+1. col1이 desc이기 때문에 index를 order by 하는데 사용 못함.
+2. 정렬에 있어서 중요한 컬럼은 col1이므로 col1을 먼저 정렬하고, 100건을 가져온다.
+3. 이후 상황에 맞게 조인 및 조건문을 추가한다.
+
+
+* 서브쿼리(사용에 따른 구분)
+   1. 스칼라 서브쿼리
+      - Select 절의 서브쿼리
+      - 무조건 Nested Loop Join 방식을 사용한다 (중요)
+      - Nested Loop Join 기준 inner 테이블로 무조건 선정되므로 index가 있어야 한다.
+      - 스칼라 서브쿼리의 결과 값이 대량이면 성능이 엄청 느려진다.
+      - 결과 집합에 영향을 안준다는 점이 outer join과 비슷함. join으로 변경 시 outer join으로 변경한다.
+      - 스칼라 서브쿼리는 캐쉬가 되기 때문에 함수를 사용하는 것보단 성능에 잇점이 있다.
+   2. 서브쿼리
+      - Where 절의 서브쿼리
+   3. 인라인 뷰
+      - From 절의 서브쿼리
+
+
+* 서브쿼리(동작에 따른 구분)
+   1. 후 수행 서브쿼리 : 서브쿼리 이외의 쿼리(메인쿼리)가 먼저 수행되고 서브쿼리가 나중에 수행 됨
+      - 서브 쿼리가 반복 수행 되기에 서브 쿼리에 데이터가 많고, 중복된 데이터가 없으면 성능이 느리게 됨.
+      - Driving 테이블은 조건에 만족하는 한 건의 데이터에 대해 서브쿼리를 한 번 수행한다. 서브쿼리를 수행하여 조건에 
+        하면 결과로 추출한다.서브쿼리는 주 쿼리에서 추출하는 데이터의 건수만큼 반복수행한다.
+
+   2. 선 수행 서브쿼리 : 서브쿼리를 먼저 수행하고 메인쿼리에 데이터를 제공함
+      - Nested Loop Join과 비슷하게 동작함. 서브쿼리의 데이터를 가져온 후 존재 여부를 확인하고 Fetch(데이터 선택) 함.
+      - 조건 데이터를 제공하는 건 서브쿼리이므로 메인쿼리에 인덱스가 있어야 함.
+      - VIEW와 SORT(UNIQUE) 실행 계획이 생성된다. VIEW 실행계획은 메모리에 가상의 집합을 만드는 실행계획이다. 
+        서브쿼리가 먼저 Access된다면 서브쿼리에서 조건에 만족하는 데이터를 한 번에 추출한다. 
+        이와 같이 추출된 데이터를 메모리에 임시 저장하기 때문에 실행계획에는 VIEW 실행계획이 생성된다. 
+        SORT(UNIQUE)는 유일한 값만 주 쿼리로 제공하여 주 쿼리의 데이블 Access 효율을 높이기 위해서이다.
+        Driving 테이블인 서브쿼리의 테이블은 한 번에 모든 값을 Access하여 UNIQUE정렬을 수행한 후 메모리에 
+        임시 집합으로 구성한다. Inner테이블은 Driving 테이블로부터 제공받은 조인 조건을 상수로 사용하여 처리 범위를 
+        시킬 수 있다.
+
+
+* 서브 쿼리 수행 : 세미 조인
+   - 조건을 만족하는 모든 데이터에 엑세스 하는 것이 아니라 조건을 만족하는 데이터 중 몇 건의 데이터만 확인하고 
+     SQL을 종료하는 처리를 n-ROW 처리라고 한다. 데이터의 존재 유무를 확인하는 경우이며 한 건의 데이터만 확인하고 종료한다.
+
+
+* 서브 쿼리 수행 : 필터
+   - 먼저 수행한 로우(메인쿼리의 결과 로우)에 대해서 엑세스한 로우를 취해야 할지 버려야 할지 결정하기 위해 하나의 데이터를
+     저장할 수 있는 버퍼에 있는 값과 비교한다. 만약에 다른경우 서브쿼리를 수행해 결과 값을 가져와 비교하고, 데이터를 버퍼에
+     다시 넣는다. 인덱스가 없는 경우 수행되는 실행계획으로 최악의 경우 메인쿼리의 로우 단위로 서브쿼리가 수행될 수 있다.
+
+     
+
+
+* 튜닝 예제
+
+1. 데이터 생성 SQL
+   
+```
+create table emp1 as select * from scott.emp, (select level no from dual connect by level <= 1000);
+create table emp2 as select * from scott.emp;
+
+alter table emp1 add constraint emp1_pk primary key(no, empno);
+alter table emp2 add constraint emp2_pk primary key(empno);
+
+EXEC dbms_stats.gather_table_stats(USER, 'emp1');
+EXEC dbms_stats.gather_table_stats(USER, 'emp2');
+```
+
+2. 튜닝 대상 SQL
+   
+```
+select *
+from emp1 e1, emp2 e2
+where e1.empno = e2.empno and
+      exists ( select 'x' from scott.dept a where loc = 'NEW YORK' and a.deptno = e1.deptno)
+```
+
+3. 튜닝(NL_SJ)
+      1. Nested Loop Semi Join의 첫 번째 outer 테이블은 데이터 양이 적어야 한다.
+      2. 따라서 서브쿼리 절의 결과 데이터가 더 수가 적으므로 NL_SJ의 outer 테이블이 되는 것이 좋다.
+      3. 서브쿼리 절을 NL_SJ를 하도록 유도하기 위해 dept의 loc, deptno 컬럼에 대한 index, emp1의 deptno 컬럼에 대한 index를 생성한다.
+      4. emp1의 deptno는 emp2의 deptno와 같으므로(동일한 empno 이면) 서브쿼리 조건절의 a.deptno = e1.deptno를 e2.deptno로 변경 가능.
+      5. 그럼에도 불구하고 서브쿼리 특성상 hint에 의한 핸들링이 잘 안될 수 있는데 이 경우 서브쿼리를 메인쿼리로 변경 (서브쿼리를 메인쿼리로 변경 시 deptno(조인키)의 중복되는 값을 grouping 한다)
+```
+select /*+ use_nl(v1,e1,e2) index(e1 emp1_idx2) */ *
+from ( select deptno from scott.dept a where loc = 'NEW YORK' group by deptno ) v1, emp1 e1, emp2 e2
+where e1.empno = e2.empno and v1.deptno = e2.deptno;
+```
+
+* Consistent Read
+   - SQL이 수행되는 시점의 데이터를 읽는 방식을 의미한다.
+   - SQL이 수행하면 SCN이라는 Id가 부여한다. SQL문이 시작된 시점에 SCN을 파악하고 해당하는 데이터 block을 읽을 때 block의 SCN이 동일한지 확인을 한다.
+   - 읽으려는 블록의 SCN이 더 높은 경우 undo log를 통해 현재 SCN의 데이터를 블록에 복사하여 읽기 때문에 업데이트가 되는 데이터를 읽으면 속도가 느리다.
+
+* Current Read
+   - SQL문이 시작된 시점이 아니라( != consistent read ) 데이터를 찾아간 시점의 최종 값을 읽는다.
+   - Update를 할 땐 Current Read를 해야한다.
+   - 마찬가지로 Select For Update를 할 때도 Current Read를 한다.
+
+* Update의 내부 동작
+   - 처음 Select를 할 땐 consistent read를 한다.
+   - 하지만 마지막 update 전에 current read를 한다(다른 트랜잭션이 해당 row에 대하여 업데이트를 했을 수 있으므로)
+   - 이런 트랜잭션에 따른 처리는 DBMS마다 다르다.
+
+* DML 수행시 고려사항
+   - redo 로그, index 등등 다양한 작업을 하기 때문에 DML은 조회보다 자원을 많이 사용하는 작업이다.
+   - DML이 자주 발생하는 테이블은 index를 최소화 해야한다.
 
 <br><br>
 
