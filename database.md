@@ -365,7 +365,56 @@ SELECT * FROM TABLE WHERE COLA='A' AND COLB IN (전체 COLB 데이터)
 
 <br><br>
 
-<h4>오라클 튜닝 교육 4일차</h4>
+<h4>오라클 튜닝 교육 4일차</h4>  
+
+* Nested Loop Join
+   - outer table : 먼저 처리되는 테이블. Driving 테이블이라고도 한다.
+   - inner table : outer 테이블이 아닌, 나중에 처리되는 테이블. Driven 테이블이라고도 한다.
+   - 고려사항(https://jojoldu.tistory.com/173)  
+       - inner 테이블의 index가 존재해야 한다.  
+       - outer 테이블의 결과 데이터가 적어야 한다.
+
+* Sort Merge Join
+   - 많이 사용 안하는 방식. 대용량 데이터 처리 시 사용. 기본적으로 index 사용 안한다.
+   - 랜덤 엑세스 사용 안 함(기본적으로 index 사용 안하므로)
+   - Join 키 컬럼이 equals 가 아닌 경우 Hash Join을 사용할 수 없으므로 사용한다.
+
+* Hash Join
+   - 첫 번째 읽히는 outer 테이블을 기준으로 Hash 테이블을 생성한다.
+   - 두 개의 Hash 함수를 사용. 첫 번째 함수를 통해 비트맵 영역(파티션)을 만들고, 두 번째 함수를 통해 비트맵 영역 하위의 HASH 테이블(서브 파티션)을 생성한다.
+   - 파티션은 PGA의 Hash Area에 저장된다. outer 테이블이 커 PGA 공간이 모자른 경우, PGA엔 temp disk 메모리에 있다는 표시를 하고 temp 영역에 저장한다.
+   - temp를 사용 안하기 위해 outer 테이블이 작아야 하고, 해쉬함수를 사용하므로 equals 조건으로 조인해야 한다.
+   - 실행계획을 통해 접근 block이 작다고 하더라도 Hash 함수를 통해 파티션 만드는 시간이 소모되기 때문에 예상보다 부하가 더 클 수 있다.
+   - inner 테이블의 인덱스 순서를 기준으로 결과가 나온다! (Nested Loop Join은 outer 테이블 인덱스 기준으로 순서 보장)
+
+* SEMI Join ( like 서브쿼리 ) : 조건문에 WHERE EMPNO IN ( SELECT ... ) 와 같이 조인과 유사하게 데이터를 연결하는 조인을 의미한다.
+   1. 필터 처리 수행 방식 : Nested Loop Join과 유사한 방식이다. 다른 점은 outer 테이블에서 inner 테이블에 엑세스 하여 값을 확인하기 전에, 버퍼 라는 공간을 만들어 inner의 데이터를 넣어놓고 inner 엑세스 전에 버퍼를 확인하는 방식이다. 하지만 inner의 데이터가 중복 값이 아닌 경우 버퍼에 한 번 더 접근한 후 inner에 엑세스 하므로 오히려 성능이 저하될 수 있다.
+   2. SEMI Hash 수행 방식 : Nested Loop Join 방식 대신 Hash Join 방식 사용 후 존재 여부만 확인하는 방식을 의미한다.
+
+* ANTI Join : ( SEMI 조인 반대. not in.. )
+
+* 카테시안 조인(Cross Join) : Join 조건이 없는 경우. 모든 가능한 데이터가 다 나오게 됨.. ( N * M )
+
+* 인라인 뷰 ( From절 서브쿼리를 의미한다 )
+   - 내부적으로 임시 뷰를 만들어 From 절의 서브쿼리 데이터를 처리하게 된다.
+   - 뷰 오브젝트(쿼리를 저장한 오브젝트)는 인덱스를 만들 수 없다.
+   - 뷰는 Hint 사용에도 어려움이 많다.
+   - 옵티마이저에 의하여 인라인 뷰가 조인으로 변경될 수 있다 ( = 병합이 가능하다 )
+   - 인라인 뷰와 테이블을 조인할 땐, 인라인 뷰를 일반적으로 outer 테이블로 해야 한다 ( 인덱스가 없으므로.. )
+
+* 서브쿼리 팩토링 ( WITH 문 )
+   - 반복되는 인라인 뷰를 WITH 문으로 정의하면 오라클이 임시로 오브젝트(뷰 또는 테이블)로 만들어 쿼리 성능을 향상 시키는 방법이다.
+   - WITH에 대하여 오라클이 임시로 오브젝트를 만든다 ( 인라인 뷰는 쿼리 오브젝트 이지만 테이블이 될 수도 있음 )
+   - 인라인 뷰와 마찬가지로 인덱스를 만들 수 없다.
+   - 인라인 뷰와 마찬가지로 Join을 할 땐, outer 테이블이어야 한다.
+   - temp 영역을 사용한다 > disk IO를 사용한다 ( 인라인 뷰로 사용 안 할 경우 )
+   - 힌트를 통해 임시 테이블 또는 뷰로 만드는 것을 제어할 수 있다.
+
+* ROWNUM
+   - 가상컬럼으로, WHERE절 처리된 이후, 정렬(Sort, Aggregation)전에 처리된다.
+   - 위의 특징 때문에 SELECT ROWNUM, ENAME FROM EMP ORDER BY ENAME 이라고 쿼리 작성시 ROWNUM이 뒤죽박죽이 된다.
+   - ROWNUM 값은 할당된 이후에만 증가한다. 때문에 SELECT * FROM T WHERE ROWNUM > 1 이라는 쿼리는 결과 값을 반환 안한다(1보다 큰 값을 아직 할당 안 했으므로..)
+
 
 <br><br>
 
