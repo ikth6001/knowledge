@@ -653,14 +653,69 @@ Old 영역의 GC를 Initial Mark -> Concurrent Mark -> Remark -> Concurrent Swee
 
 <br>
 <br>
-<h4></h4>
-<br>
-<br>
-<h4></h4>
+<h4>Java 관련 소소한 팁</h4>  
+
+* Synchronized 인스턴스 메서드에 거는 것과 static에 거는 것  
+
+synchronized method는 synchronized(this) { } 블럭으로 쓰는 것과 동일합니다. 즉, 현재 instance에 대해서만 동기화가 일어난다는 것이지요. 이 경우 해당 instance에서는 동기화가 일어나지만, 2개 이상의 instance가 있다면 각각의 instance에 대해 동기화가 일어나므로
+두 개의 instance가 각각의 method를 실행하는 것이 가능합니다. 반면 static synchronized method의 경우는 해당 클래스의 클래스 객체에 대해 동기화가 일어납니다. 따라서, static 한 member 변수를 동기화하려면,
+static synchronized를 사용하여야 합니다. 각각 아래는 동일한 형태를 의미한다.
+```
+public synchronized void methodA() { ... }
+public void methodA() { synchronized(this) { ... } }
+
+```
+```
+public static synchronized void methodA() {  ... }
+public static void methodA() { synchronized(TargetClass.class) { ... } }
+```
+
+* interface와 abstract의 차이점  
+   - abstract는 클래스 상속이므로 하나만 가능하다. 즉 다중 상속이 불가능하다.
+   - interface는 다중 구현이 가능하다.
+   - 개인적인 경험으로 구현 하고자 하는 모듈의 템플릿이 될 수 있는 로직 정의가 가능하다면 abstract를 사용하는 것이 좋고, 그게 아니라면 interface를 사용하는 것이 맞다고 생각한다.  
+   
+* Thread safe 하다는 의미  
+복수 개의 thread가 연산을 수행할 때 공유되는 자원은 동시에 하나의 thread만 접근할 수 있도록 구현된 것을 thread safe 하다고 한다.
+thread safe 하도록 구현하려면 다음 조건 중 하나를 만족해야 한다.  
+   - Stateless 객체 : 변경 가능한 상태를 가지지 않고 있는 객체. 
+   - Immutable 객체 : immutable 객체는 변경되지 않는 객체를 말한다. 때문에 상태를 나타내는 필드를 final로 선언하고 setter 메소드가 없으면 immutable 객체가 된다.
+   - thread local 활용
+   - Synchronized 활용
+
+* 효율적인 해시함수 구현  
+
+   - 동일한 객체는 동일한 해시코드를 리턴해야 한다.(몇번을 호출하든)
+   - 기본 구현 방법은 Object.hash(field01, field02..) 이다. 그리고 equals 메소드에서 사용한 필드를 사용하는 것이 좋다. equals에서 사용 안 하는 필드를 사용해선 안된다.
+   - Mutable한 객체는 hashCode를 구하는데 사용 안하는 것이 좋다.(hashMap에 저장 후 mutable한 객체의 필드가 바뀌면 문제가 될 수 있으므로)
+   - Collection 타입을 통해서는 가능하면 HashCode를 구하려고 하지 마라 (자주 호출되므로 성능 문제를 일으킬 수 있으므로)
+
+
 
 <br>
 <br>
-<h4></h4>
+<h4>javaSE, jdk, java의 의미</h4>
+
+- java는 언어를 의미한다.
+- javaSE는 java standard edition의 의미로 표준을 의미한다.
+- jdk는 javaSE를 구현한 구현체를 의미한다. oracle jdk, open jdk, ibm jdk 등등이 있다.
+
+<br>
+<br>
+<h4>jdk 7, 8, 9, 10에 대하여..</h4>
+
+- jdk7(https://d2.naver.com/helloworld/1219) 
+   - nio : 더 많은 기능을 제공해주는 API, FileVisitor, WatchService, 비동기 I/O
+   - interface default method
+   - try catch resource
+   - Fork/Join framework
+- jdk8
+   - lambda
+   - functional programming
+- jdk9
+   - jigsaw(https://infoscis.github.io/2017/03/24/First-steps-with-java9-and-jigsaw-part-1/)
+- jdk10(https://itstory.tk/entry/Java-10-%EC%8B%A0%EA%B7%9C-%EA%B8%B0%EB%8A%A5%ED%8A%B9%EC%A7%95-%EC%A0%95%EB%A6%AC)
+
 
 <br>
 <br>
