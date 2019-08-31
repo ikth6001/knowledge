@@ -562,26 +562,6 @@ where e1.empno = e2.empno and v1.deptno = e2.deptno;
 
 <br><br>
 
-<h4>OSI 7계층</h4>  
-
-ISO에서 정의한 네트워킹 프레임워크를 7계층으로 구분하여 정의한 개념이다.
-7. Application : 웹 어플리케이션과 사용자를 지원하는 계층이다. HTTP, FTP, SMTP와 같은 프로토콜이 이에 속한다.  
-
-6. Presentation : 수신한 데이터를 웹 어플리케이션이 이해할 수 있는 데이터로 변경하거나 웹 어플리케이션이 송신한 데이터를 통신이 가능한 데이터로 변경하는 역할을 한다. SSL, MIME과 같은 프로토콜이 이에 속한다.  
-
-5. Session : 웹 어플리케이션간의 Connection(Session) 생성/관리/제거 하는 역할을 한다. PPTP, SAP과 같은 프로토콜이 이에 속한다. 
-
-4. Transfer : 서버/클라이언트 간의 데이터 전송을 맡는 계층이다(데이터가 전송되다 실패했을 경우엔 어떻게 할지 등등 결정). TCP, UDP와 같은 프로토콜이 이에 속한다.  
-
-3. Network : 목적지로 데이터 전송을 하기 위한 라우팅을 하는 계층이다. 현재 위치에서 다음 위치를 찾는다고 생각하면 된다. IPv4, IPv6와 같은 프로토콜이 이에 속한다.  
-
-2. Data Link : 패킷을 bit로 인코딩/디코딩 하고 하위 계층(physical)에서의 오류를 처리하는 역할을 한다.  
-
-1. Physical : bit 데이터를 전기적 신호, 빛 신호 등등으로 만들어 전송하는 계층이다.  
-
-
-<br><br>
-
 <h4>DB 정규화와 비정규화</h4>  
 
 * 정규화(https://yaboong.github.io/database/2018/03/09/database-normalization-1/)  
